@@ -1,0 +1,10 @@
+#!/bin/bash
+# based on a script from http://invisible-island.net/xterm/xterm.faq.html
+exec < /dev/tty
+oldstty=$(stty -g)
+stty raw -echo min 0
+echo -en "\033[6n" > /dev/tty
+IFS=';' read -r -d R -a pos
+stty $oldstty
+col=$((${pos[1]} - 1))
+echo $col

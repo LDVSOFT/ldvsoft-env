@@ -1,0 +1,14 @@
+Source: ldvsoft-env-bash-prompt
+Section: admin
+Priority: optional
+Maintainer: Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.7
+Homepage: https://github.com/LDVSOFT/ldvsoft-env/
+
+Package: ldvsoft-env-bash-prompt
+Architecture: all
+Depends: ${misc:depends}, bash (>=4.0)
+Enhances: git (>=2.7), sudo (>=1.8) 
+Description: LDVSOFT environment: bash prompt
+ LDVSOFT environment: bash multiline prompt.
