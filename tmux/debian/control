@@ -1,0 +1,13 @@
+Source: ldvsoft-env-tmux
+Section: admin
+Priority: optional
+Maintainer: Lapshin Dmitry <lapshin.dv@mail.ru>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: https://github.com/LDVSOFT/ldvsoft-env/
+
+Package: ldvsoft-env-tmux
+Architecture: all
+Depends: ${misc:depends}, tmux (>=2.0), bash (>=4.0)
+Description: LDVSOFT environment: tmux configuration
+ LDVSOFT environment: tmux configuration and support scripts.
