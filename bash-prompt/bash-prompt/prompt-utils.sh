@@ -1,5 +1,5 @@
 __prompt_print_path () {
-	local path="$1"
+	local path="$@"
 	local home="$HOME"
 	path=$(echo ${path} | sed "s|^${home}|~|")
 	echo -n "${path}"
