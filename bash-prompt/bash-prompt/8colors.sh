@@ -2,8 +2,7 @@ export __prompt_clr_fg="${__prompt_reset}"
 export __prompt_clr_standout="${__prompt_clr_fg}$(tput bold)"
 
 if [ -z "${__prompt_root}" ] ; then
-	#change this to prefered user color
-	export __prompt_clr="${__prompt_reset}$(tput setaf 5)"
+	export __prompt_clr="${__prompt_reset}"
 	export __prompt_clr_username="$(tput setaf 2; tput bold)"
 else
 	export __prompt_clr="${__prompt_reset}$(tput setaf 1)"

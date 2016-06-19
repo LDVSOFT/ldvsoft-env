@@ -1,5 +1,12 @@
 #!/bin/bash
 
+__prompt_source() {
+	local file="$@"
+	if [ -f "${file}" ] ; then
+		source "${file}"
+	fi
+}
+
 __prompt_newline () {
 	export __prompt_line_id=$(( __prompt_line_id + 1 ))
 	if (( __prompt_line_id == 1 )) ; then
@@ -76,10 +83,16 @@ __prompt_setup () {
 	export __prompt_reset=$(echo -e '\e[0m')
 	export __prompt_bold=$(tput bold)
 
+	local color_file=""
 	case "$(tput colors)" in
 		8|88|256)
-			source "${__prompt_path}/8colors.sh" ;;
+			color_file="8colors.sh" ;;
 	esac
+	if [ ! -z "${color_file}" ] ; then
+		source "${__prompt_path}/${color_file}"
+		__prompt_source "/etc/ldvsoft-env/bash-prompt/${color_file}"
+		__prompt_source "${HOME}/.ldvsoft-env/bash-prompt/${color_file}"
+	fi
 	
 	# this one is in bash format
 	export __prompt_sep="${__prompt_clr}──"

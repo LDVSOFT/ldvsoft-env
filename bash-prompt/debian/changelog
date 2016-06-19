@@ -1,3 +1,9 @@
+ldvsoft-env-bash-prompt (0.1.2) xenial; urgency=medium
+
+  * Added colors config files (system global and per user)
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Sun, 19 Jun 2016 23:07:20 +0300
+
 ldvsoft-env-bash-prompt (0.1.1) xenial; urgency=medium
 
   * Fixed path with spaces only displayed up to the first space
