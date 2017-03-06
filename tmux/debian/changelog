@@ -1,3 +1,9 @@
+ldvsoft-env-tmux (1.0.2.1) xenial; urgency=low
+
+  * Added dependancy on ncurses-term to provide tmux terminfo-s.
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Sun, 5 Mar 2017 23:10:00 +0300
+
 ldvsoft-env-tmux (1.0.2) xenial; urgency=high
 
   * Fixed installation of symbolic links
