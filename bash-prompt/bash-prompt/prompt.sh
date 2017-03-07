@@ -22,8 +22,9 @@ __prompt () {
 	export __prompt_line_id=0
 	export __prompt_width=$(tput cols)
 
+	# tmux integration
 	if [ ! -z "${TMUX}" ] ; then
-		source "${__prompt_path}/../tmux/at-prompt.sh"
+		__prompt_source "${__prompt_path}/../tmux/at-prompt.sh"
 	fi
 
 	local need=

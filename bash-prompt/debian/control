@@ -8,7 +8,7 @@ Homepage: https://github.com/LDVSOFT/ldvsoft-env/
 
 Package: ldvsoft-env-bash-prompt
 Architecture: all
-Depends: ${misc:depends}, bash (>=4.0)
+Depends: ${misc:Depends}, bash (>=4.0)
 Enhances: git (>=2.7), sudo (>=1.8) 
 Description: LDVSOFT environment: bash prompt
  LDVSOFT environment: bash multiline prompt.
