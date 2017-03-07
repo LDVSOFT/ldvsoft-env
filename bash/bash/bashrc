@@ -1,0 +1,14 @@
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+for f in $(find /usr/share/ldvsoft/bash/bashrc.d -name '*.sh' | sort) ; do
+	source "$f"
+done
+if [ -d ~/.bashrc.d ] ; then
+	for f in $(find ~/.bashrc.d -name '*.sh' | sort) ; do
+		source "$f"
+	done
+fi

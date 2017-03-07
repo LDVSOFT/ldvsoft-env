@@ -1,0 +1,13 @@
+Source: ldvsoft-env-bash
+Section: admin
+Priority: optional
+Maintainer: Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.7
+Homepage: https://github.com/LDVSOFT/ldvsoft-env/
+
+Package: ldvsoft-env-bash
+Architecture: all
+Depends: ${misc:Depends}, bash (>=4.0)
+Description: LDVSOFT environment: bash configuration.
+ LDVSOFT environment: bashrc with drop-ins and default set of them.
