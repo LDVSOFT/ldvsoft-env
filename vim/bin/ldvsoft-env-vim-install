@@ -1,0 +1,6 @@
+#!/bin/sh
+
+rm -rf ~/.vim ~/.vimrc
+ln -s /usr/share/ldvsoft/vim/vimrc ~/.vimrc
+mkdir ~/.vim
+vam install pathogen

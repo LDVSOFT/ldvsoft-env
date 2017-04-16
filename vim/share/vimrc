@@ -1,0 +1,28 @@
+execute pathogen#infect()
+
+au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
+filetype plugin indent on
+
+set autowrite
+set hidden
+set hlsearch
+set incsearch
+set langmap=ёйцукенгшщзхъфывапролджэячсмитьбюЁЙЦУКЕHГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ;`qwertyuiop[]asdfghjkl\\;'zxcvbnm\\,.~QWERTYUIOP{}ASDFGHJKL:\\"ZXCVBNM<>
+set langnoremap
+set laststatus=2
+set modeline
+set mouse=a
+set number
+set shiftwidth=0
+set showcmd
+set showmatch
+set tabstop=4
+set wildmenu
+
+colorscheme delek
+
+if &term =~ "tmux"
+	set ttymouse=sgr
+endif
+
+au CompleteDone * pclose

@@ -1,0 +1,13 @@
+Source: ldvsoft-env-vim
+Section: admin
+Priority: optional
+Maintainer: Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.7
+Homepage: https://github.com/LDVSOFT/ldvsoft-env/
+
+Package: ldvsoft-env-vim
+Architecture: all
+Depends: ${misc:Depends}, vim-nox | gvim, vim-pathogen
+Description: LDVSOFT environment: vim configuration.
+ LDVSOFT environment: vim basic configuration.
