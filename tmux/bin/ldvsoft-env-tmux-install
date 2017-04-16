@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm ~/.tmux.conf
+ln -s /usr/share/ldvsoft/tmux/tmux.conf ~/.tmux.conf

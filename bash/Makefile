@@ -1,7 +1,9 @@
-INSTALLDIR=$(DESTDIR)/usr/share/ldvsoft/bash
+SHAREDIR=$(DESTDIR)/usr/share/ldvsoft/bash
+BINDIR=$(DESTDIR)/usr/bin
 
 all:
 
 install:
-	mkdir -p $(INSTALLDIR)
-	cp -r --preserve=mode,timestamps bash/* $(INSTALLDIR)/
+	mkdir -p $(SHAREDIR) $(BINDIR)
+	cp -r --preserve=mode,timestamps share/* $(SHAREDIR)/
+	cp -r --preserve=mode,timestamps bin/* $(BINDIR)/

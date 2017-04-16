@@ -1,0 +1,5 @@
+#!/bin/sh
+
+rm ~/.bashrc
+ln -s /usr/share/ldvsoft/bash/bashrc ~/.bashrc
+mkdir ~/.bashrc.d
