@@ -1,7 +1,7 @@
 Source: ldvsoft-env-tmux
 Section: admin
 Priority: optional
-Maintainer: Lapshin Dmitry <lapshin.dv@mail.ru>
+Maintainer: Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>
 Build-Depends: debhelper (>=9)
 Standards-Version: 3.9.7
 Homepage: https://github.com/LDVSOFT/ldvsoft-env/

@@ -1,3 +1,9 @@
+ldvsoft-env-vim (1.0.1ubuntu2) artful; urgency=medium
+
+  * Rebuild to artful. 
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Fri, 09 Mar 2018 18:32:04 +0300
+
 ldvsoft-env-vim (1.0.1ubuntu1) xenial; urgency=medium
 
   * Fixed binary name

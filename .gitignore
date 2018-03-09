@@ -3,3 +3,4 @@
 *.changes
 *.build
 *.ppa.upload
+*/debian/files
