@@ -1,3 +1,9 @@
+ldvsoft-env-vim (1.0.1ubuntu3) bionic; urgency=medium
+
+  * Rebuild to bionic. 
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Wed, 16 May 2018 15:10:05 +0300
+
 ldvsoft-env-vim (1.0.1ubuntu2) artful; urgency=medium
 
   * Rebuild to artful. 
