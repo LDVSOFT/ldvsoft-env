@@ -1,3 +1,9 @@
+ldvsoft-env-bash (0.1.3ubuntu3) disco; urgency=medium
+
+  * Rebuild to disco.
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Sun, 01 Sep 2019 00:39:43 +0300
+
 ldvsoft-env-bash (0.1.3ubuntu2) bionic; urgency=medium
 
   * Rebuild to bionic. 
