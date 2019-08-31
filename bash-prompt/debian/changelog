@@ -1,4 +1,10 @@
-ldvsoft-env-bash-prompt (0.1.3ubuntu2) bionic; urgency=medium
+ldvsoft-env-bash-prompt (0.1.3ubuntu3) bionic; urgency=medium
+
+  * Rebuild to bionic >_>.
+
+ -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Wed, 16 May 2018 20:05:56 +0300
+
+ldvsoft-env-bash-prompt (0.1.3ubuntu2) artful; urgency=medium
 
   * Rebuild to bionic. 
 
