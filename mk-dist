@@ -10,6 +10,7 @@ function error {
 }
 
 packages=()
+user_abs_home=
 while (( $# != 0 )) {
 	option=$1
 	if [[ $option =~ '^[^-]\.*' && ! -v option_wants_arg ]] {
@@ -61,12 +62,12 @@ while (( $# != 0 )) {
 			location=$param
 			;;
 
-		--user-abs-for)
-			option_wants_arg=location
+		--user-absolute-home)
+			option_wants_arg=user-absolute-home
 			;;
-		--user-abs-for=*)
-			param=${option#--user-abs-for=}
-			user_abs_for=$param
+		--user-absolute-home=*)
+			param=${option#--user-absolute-home=}
+			user_abs_home=${~param}
 			;;
 
 		--uber-package)
@@ -126,40 +127,39 @@ if (( $#packages == 0 )) {
 	error Package to build not specified. Use --uber-package or --package.
 }
 
-if [[ $location != user-abs-* && -v user_abs_for ]] {
-	warning --user-abs-for option is only effective for user-abs-… locations.
+if [[ $location != user-* && -n $user_abs_home ]] {
+	warning --user-absolute-home option is only effective for user-… locations.
 }
 
 function location_absolute {
 	location_kind=absolute
 	location_prefix=${1%/}
+	dist_target_prefix=/
+
 	if [[ -v 2 ]] {
-		local private_name=$package_private_name
+		location_private_stem=$package_private_name
+	}
+}
+
+function location_user {
+	if [[ -n $user_abs_home ]] {
+		location_kind=absolute
+		location_prefix=${user_abs_home}/${1%/}
+		dist_target_prefix=/
+	} else {
+		location_kind=user-home-adaptive
+		location_prefix='${HOME}'/${1%/}
+		dist_target_prefix='${HOME}'/
 	}
 
-	location_bindir=$location_prefix/bin
-	location_libdir_public=$location_prefix/lib
-	location_libdir_private=$location_libdir_public/${private_name-private}
-	location_execdir_public=$location_prefix/libexec
-	location_execdir_private=$location_execdir_public/${private_name-private}
-	# TODO: expression support for user-xdg
-	location_datadir_private=$location_prefix/share${private_name+/$private_name}
-
-	dist_target_prefix=/
+	if [[ -v 2 ]] {
+		location_private_stem=$package_private_name
+	}
 }
 
 function location_test {
 	location_kind=test
 	location_prefix=${${:-$sourcedir/test-install}:P}
-
-	location_bindir=$location_prefix/bin
-	location_libdir_public=$location_prefix/lib
-	location_libdir_private=$location_libdir_public/private
-	location_execdir_public=$location_prefix/libexec
-	location_execdir_private=$location_execdir_public/private
-	# TODO: expression support for user-xdg
-	location_datadir_private=$location_prefix/share
-
 	dist_target_prefix=$location_prefix/
 }
 
@@ -176,28 +176,37 @@ case $location {
 	system-opt)
 		location_absolute /opt/$package_private_name
 		;;
-	user-abs-xdg)
-		echo Location $param is not implemented. >&2
-		exit 1
+	user-xdg)
+		error Location $param is not implemented.
 		;;
-	user-abs-local)
-		location_absolute ~${user_abs_for:-}/.local +
+	user-local)
+		location_user .local +
 		;;
-	user-abs-opt)
-		location_absolute ~${user_abs_for:-}/.local/opt/$package_private_name
+	user-opt)
+		location_user .local/opt/$package_private_name
 		;;
 	absolute@*)
 		location_absolute ${${location#absolute@}:P}
 		;;
 	test-install)
 		location_test
-		;;	
+		;;
 	*)
-		echo Unknown location $param. >&2
+		echo Unknown location $location. >&2
 		exit 1
 }
 
+location_bindir=$location_prefix/bin
+location_libdir_public=$location_prefix/lib
+location_libdir_private=$location_libdir_public/${location_private_stem-private}
+location_execdir_public=$location_prefix/libexec
+location_execdir_private=$location_execdir_public/${location_private_stem-private}
+# TODO: expression support for user-xdg
+location_datadir_private=$location_prefix/share${location_private_stem+/$location_private_stem}
+
 unfunction location_absolute
+unfunction location_user
+unfunction location_test
 
 if [[ -v debug ]] {
 	echo-log 'Location:' $location "($location_kind)."
@@ -270,7 +279,7 @@ function build-fhs-dir {
 		local f
 		for f ( **/* ) {
 			if [[ -d $f ]] {
-				build-dir $trg/$f 
+				build-dir $trg/$f
 			} elif [[ -f $f ]] {
 				build-file $f $trg/$f
 			}
@@ -292,7 +301,7 @@ unfunction build-fhs-dir
 
 if [[ -v debug ]] (
 	cd $builddir
-	tree
+	tree -a
 )
 
 if [[ -v dist_output ]] {
@@ -307,5 +316,5 @@ if [[ ! -v install ]] {
 echo-log Preparing install.
 
 # TODO this is not a proper way...
-cp -r $builddir/* $dist_target_prefix
+cp -r $builddir/* ${(e)dist_target_prefix}
 echo Install completed.

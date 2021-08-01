@@ -37,7 +37,35 @@ There are several options regarding some of those locations:
   private scoping.  Do remember that some scopes are already in public use, I wouldn't call 
   `/usr/lib/python3.9` a private location.
   * `bindir`, because of its usage, can't have a private subdirectory.
-  * Public `datadir`, on the other hard, is not used directly at all. 
+  * Public `datadir`, on the other hard, is not used directly at all.
+  * Since Debian forbids using `lib` for architecture-independent files (actually they allow if 
+    there is a mix of dependent and independent files), for now I put library-like scripts into
+    data.
+
+Expressions
+-----------
+
+One important point here is that if you'd simply implement those locations with string substitution,
+you'd get some options but not all of them:
+* For user locations, that would embed username and their home directory path into the distribution.
+  Barely reusable.
+* XDG environment variables…
+
+Because of that, embedding path information requires a little more that just a string literal. While
+I can just provide a helper script, if a tool can invoke programs from its configuration files it
+probably already can deal with environment variables and users' home directories. By the way, how 
+would one lookup where this script is located?
+
+For now, paths should support simple environment variables expansion. Some more options maybe to 
+come:
+* `~` expansion, instead of `$HOME`.
+* Defaults for environments, like bash / zsh `${varVame-defaultWord}` (maybe with a colon).
+
+> As an alternative, I can translate variable lookups into native config languages, but embedding 
+> all that into installations seems harder that it's worth.
+
+Installation locations
+----------------------
 
 Those directories depend on installation location. All paths below should be considered shell (bash 
 or zsh) expressions, with `~` expanding to home directory of a user and `${}` being substitutions of

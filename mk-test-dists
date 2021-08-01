@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NULL_GLOB
+
+system_locations=(system-root system-usr system-local system-opt)
+user_locations=(user-local user-opt)
+
+cd ${0:h}
+if [[ ! -d test-dists ]] {
+	mkdir test-dists
+}
+rm -rf test-dists/* test-dists/.*
+for location ($system_locations $user_locations) {
+	echo '======' $location
+	./mk-dist -v --uber-package --location=$location --output=test-dists/ldvsoft-env_$location.tgz
+}
+for location ($user_locations) {
+	echo '======' $location home-abs
+	./mk-dist -v --uber-package --location=$location --user-absolute-home=$HOME --output=test-dists/ldvsoft-env_${location}_$USER.tgz
+}
