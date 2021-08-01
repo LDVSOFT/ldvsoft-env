@@ -114,7 +114,7 @@ if [[ ! -v packages ]] {
 	packages=(core)
 	for f ( $sourcedir/*(/) ) {
 		local package=${f:t}
-		if [[ -f $sourcedir/$package/data/install/$package.zsh || -f $sourcedir/$package/lib-private/install/$package.zsh ]] {
+		if [[ -f $sourcedir/$package/data/install/$package.zsh ]] {
 			packages+=$package
 		}
 	}
