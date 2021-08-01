@@ -1,0 +1,24 @@
+#!/usr/bin/env zsh
+setopt -e
+
+expected_install_dir='@@BINDIR@@'
+actual_install_dir=${0:A:h}
+
+if [[ $expected_install_dir != $actual_install_dir ]] {
+	echo Installation is broken! >&2
+	echo $'\t'Expected installation location: $expected_install_dir
+	echo $'\t'Actual installaton location:    $actual_install_dir
+	exit 2
+}
+
+if (( $# == 0 )) {
+	echo Command not given. >&2
+	exit 1
+}
+command=$1; shift
+
+case $command {
+	*)
+		echo Unknown command $command. >&2
+		exit 1
+}

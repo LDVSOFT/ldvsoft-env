@@ -1,0 +1,311 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NO_UNSET
+
+package_private_name=ldvsoft-env
+sourcedir=${0:h}
+
+function error {
+	echo 'Error:' $@ >&2
+	exit 1
+}
+
+packages=()
+while (( $# != 0 )) {
+	option=$1
+	if [[ $option =~ '^[^-]\.*' && ! -v option_wants_arg ]] {
+		break
+	}
+	shift
+	if [[ -v option_wants_arg ]] {
+		option=$option_wants_arg=$option
+		unset option_wants_arg
+	}
+	case $option {
+		-v|--verbose)
+			debug=1
+			;;
+		--no-verbose)
+			unset debug
+			;;
+
+		--strict)
+			strict=1
+			;;
+		--no-strict)
+			unset strict
+			;;
+
+		--install)
+			install=1
+			;;
+		--no-install)
+			unset install
+			;;
+
+		--no-output)
+			unset dist_output
+			;;
+		--output)
+			option_wants_arg=output
+			;;
+		--output=*)
+			param=${option#--output=}
+			dist_output=$param
+			;;
+
+		--location)
+			option_wants_arg=location
+			;;
+		--location=*)
+			param=${option#--location=}
+			location=$param
+			;;
+
+		--user-abs-for)
+			option_wants_arg=location
+			;;
+		--user-abs-for=*)
+			param=${option#--user-abs-for=}
+			user_abs_for=$param
+			;;
+
+		--uber-package)
+			unset packages
+			;;
+		--package)
+			option_wants_arg=package
+			;;
+		--package=*)
+			if [[ ! -v packages ]] {
+				error Cannot combine --package with --uber-package.
+			}
+			param=${option#--package=}
+			packages+=$package
+			;;
+
+		*)
+			error Unknown option $option.
+	}
+}
+
+function echo-log {
+	if [[ ! -v debug ]] { return }
+	echo '[log]' $@ >&2
+}
+
+function warning {
+	if [[ -v strict ]] {
+		error $@
+	} else {
+		echo 'Warning:' $@ >&2
+	}
+}
+
+if (( $# != 0 )) {
+	echo Positional arguments: $@
+}
+
+if [[ ! -v location ]] {
+	error Location not specified.
+}
+
+if [[ ! -v packages ]] {
+	# Uber
+	packages=(core)
+	for f ( $sourcedir/*(/) ) {
+		local package=${f:t}
+		if [[ -f $sourcedir/$package/data/install/$package.zsh || -f $sourcedir/$package/lib-private/install/$package.zsh ]] {
+			packages+=$package
+		}
+	}
+	unset f
+	echo-log Detected packages: $packages.
+}
+
+if (( $#packages == 0 )) {
+	error Package to build not specified. Use --uber-package or --package.
+}
+
+if [[ $location != user-abs-* && -v user_abs_for ]] {
+	warning --user-abs-for option is only effective for user-abs-… locations.
+}
+
+function location_absolute {
+	location_kind=absolute
+	location_prefix=${1%/}
+	if [[ -v 2 ]] {
+		local private_name=$package_private_name
+	}
+
+	location_bindir=$location_prefix/bin
+	location_libdir_public=$location_prefix/lib
+	location_libdir_private=$location_libdir_public/${private_name-private}
+	location_execdir_public=$location_prefix/libexec
+	location_execdir_private=$location_execdir_public/${private_name-private}
+	# TODO: expression support for user-xdg
+	location_datadir_private=$location_prefix/share${private_name+/$private_name}
+
+	dist_target_prefix=/
+}
+
+function location_test {
+	location_kind=test
+	location_prefix=${${:-$sourcedir/test-install}:P}
+
+	location_bindir=$location_prefix/bin
+	location_libdir_public=$location_prefix/lib
+	location_libdir_private=$location_libdir_public/private
+	location_execdir_public=$location_prefix/libexec
+	location_execdir_private=$location_execdir_public/private
+	# TODO: expression support for user-xdg
+	location_datadir_private=$location_prefix/share
+
+	dist_target_prefix=$location_prefix/
+}
+
+case $location {
+	system-root)
+		location_absolute '' +
+		;;
+	system-usr)
+		location_absolute /usr +
+		;;
+	system-local)
+		location_absolute /usr/local +
+		;;
+	system-opt)
+		location_absolute /opt/$package_private_name
+		;;
+	user-abs-xdg)
+		echo Location $param is not implemented. >&2
+		exit 1
+		;;
+	user-abs-local)
+		location_absolute ~${user_abs_for:-}/.local +
+		;;
+	user-abs-opt)
+		location_absolute ~${user_abs_for:-}/.local/opt/$package_private_name
+		;;
+	absolute@*)
+		location_absolute ${${location#absolute@}:P}
+		;;
+	test-install)
+		location_test
+		;;	
+	*)
+		echo Unknown location $param. >&2
+		exit 1
+}
+
+unfunction location_absolute
+
+if [[ -v debug ]] {
+	echo-log 'Location:' $location "($location_kind)."
+	echo-log '|- Bindir:           ' $location_bindir
+	echo-log '|- Execdir (public): ' $location_execdir_public
+	echo-log '|- Execdir (private):' $location_execdir_private
+	echo-log '|- Libdir (public):  ' $location_libdir_public
+	echo-log '|- Libdir (private): ' $location_libdir_private
+	echo-log '|- Datadir (private):' $location_datadir_private
+}
+
+if [[ ! -v install && ! -v dist_output ]] {
+	error Nothing to do\; request installation via --install or/and distribution via --output.
+}
+
+echo-log Preparing build.
+
+builddir=${$(mktemp -d --tmpdir ldvsoft-env_mk-dist.XXXX)%/}
+
+TRAPZERR TRAPEXIT () {
+	rm -rf $builddir
+}
+
+echo-log Build at $builddir.
+
+function build-dir {
+	local full=$builddir/${1#$dist_target_prefix}
+	if [[ -d $full ]] { return }
+	mkdir $full
+}
+
+function build-file {
+	local src=$1
+	local trg=$builddir/${2#$dist_target_prefix}
+	if [[ -v 3 ]] {
+		local extended=1
+	}
+
+	cp $src $trg
+	sed -i \
+		-e "s:@@BINDIR@@:$location_bindir:" \
+		-e "s:@@EXECDIR_PUBLIC@@:$location_execdir_public:" \
+		-e "s:@@EXECDIR_PRIVATE@@:$location_execdir_private:" \
+		-e "s:@@LIBDIR_PUBLIC@@:$location_libdir_public:" \
+		-e "s:@@LIBDIR_PRIVATE@@:$location_libdir_private:" \
+		-e "s:@@DATADIR_PRIVATE@@:$location_datadir_private:" \
+		$trg
+	if [[ -v extended ]] {
+		sed -i \
+			-e "s:@@PACKAGES@@:$packages:" \
+			-e "s:@@LOCATION@@:$location:" \
+			-e "s:@@LOCATION_KIND@@:$location_kind:" \
+			-e "s:@@DIST_TARGET_PREFIX@@:$dist_target_prefix:" \
+			$trg
+	}
+}
+
+function build-fhs-dir {
+	local dir=$1
+	local trg=$2
+
+	if [[ ! -d $dir ]] { return }
+
+	local full=$builddir/${trg#$dist_target_prefix}
+	if [[ ! -d $full ]] { mkdir -p $full }
+
+	(
+		setopt NULL_GLOB
+		cd $dir
+		local f
+		for f ( **/* ) {
+			if [[ -d $f ]] {
+				build-dir $trg/$f 
+			} elif [[ -f $f ]] {
+				build-file $f $trg/$f
+			}
+		}
+	)
+}
+
+build-file ${0:h}/dist-README.md README.md +
+for p ( $packages ) {
+	build-fhs-dir $sourcedir/$p/bin $location_bindir
+	build-fhs-dir $sourcedir/$p/lib-private $location_libdir_private
+	build-fhs-dir $sourcedir/$p/data $location_datadir_private
+	# TODO other dirs
+}
+
+unfunction build-dir
+unfunction build-file
+unfunction build-fhs-dir
+
+if [[ -v debug ]] (
+	cd $builddir
+	tree
+)
+
+if [[ -v dist_output ]] {
+	tar --create --auto-compress -f $dist_output -C $builddir .
+	echo Created distribution archive $dist_output.
+}
+
+if [[ ! -v install ]] {
+	exit
+}
+
+echo-log Preparing install.
+
+# TODO this is not a proper way...
+cp -r $builddir/* $dist_target_prefix
+echo Install completed.

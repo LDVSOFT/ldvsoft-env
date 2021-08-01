@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+setopt -e
+
+cd ${0:h}
+rm -rf test-install
+mkdir test-install
+./mk-dist -v --location=test-install --install --uber-package
+echo Done.
