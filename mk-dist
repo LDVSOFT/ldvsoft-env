@@ -9,6 +9,7 @@ function error {
 	exit 1
 }
 
+installopts=()
 packages=()
 user_abs_home=
 while (( $# != 0 )) {
@@ -70,7 +71,11 @@ while (( $# != 0 )) {
 			;;
 		--install-dir=*)
 			param=${option#--*=}
-			installdir=$param
+			installopts+=--dest-dir=$param
+			;;
+
+		--install-mkdir)
+			installopts+=--mkdir
 			;;
 
 		--location)
@@ -122,7 +127,7 @@ function warning {
 }
 
 if (( $# != 0 )) {
-	echo Positional arguments: $@
+	error Extra options: $@.
 }
 
 if [[ ! -v location ]] {
@@ -150,8 +155,8 @@ if [[ $location != user-* && -n $user_abs_home ]] {
 	warning --user-absolute-home option is only effective for user-… locations.
 }
 
-if [[ ! -v install && -v installdir ]] {
-	warning --install-dir option is only effective when --install is enabled.
+if [[ ! -v install && $#installopts != 0 ]] {
+	warning --install-… options are only effective when --install is enabled.
 }
 
 function location_absolute {
@@ -364,6 +369,6 @@ if [[ ! -v install ]] {
 
 echo-log Executing install.
 
-DESTDIR=${DESTDIR:-} $builddir/install
+$builddir/install $installopts
 
 echo Installation done.

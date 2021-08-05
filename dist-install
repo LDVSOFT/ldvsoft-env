@@ -1,6 +1,43 @@
 #!/usr/bin/env zsh
 setopt ERR_EXIT NULL_GLOB EXTENDED_GLOB NO_UNSET
 
+while (( $# != 0 )) {
+	option=$1
+	if [[ $option =~ '^[^-]\.*' && ! -v option_wants_arg ]] {
+		break
+	}
+	shift
+	if [[ -v option_wants_arg ]] {
+		option=$option_wants_arg=$option
+		unset option_wants_arg
+	}
+	case $option {
+		--dest-dir)
+			option_wants_arg=$option
+			;;
+		--dest-dir=*)
+			param=${option#--*=}
+			DESTDIR=$param
+			;;
+
+		--mkdir)
+			mkdir_public=1
+			;;
+		--no-mkdir)
+			unset mkdir_public
+			;;
+
+		*)
+			echo Unknown option $option. >&2
+			exit 1
+	}
+}
+
+if (( $# != 0 )) {
+	echo Extra options: $@. >&2
+	exit 1
+}
+
 cmdprefix=(${(@)CMDPREFIX:-})
 installer=($cmdprefix cp -r --preserve=timestamps)
 sourcedir=${0:h}
@@ -17,9 +54,11 @@ function install-dir {
 	case $mode {
 		public)
 			local exclude=$sourcedir/${${3:-/CANNOT-MATCH-A-THING}#/}
+			[[ -d $trg ]] || [[ -v mkdir_public ]] && mkdir -p $trg
 			$installer $src/*~$exclude $trg
 			;;
 		private)
+			[[ -d ${trg:h} ]] || [[ -v mkdir_public ]] && mkdir -p ${trg:h}
 			[[ -d $trg ]] || $cmdprefix mkdir $trg
 			$installer $src/* $trg
 			;;

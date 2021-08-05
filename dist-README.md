@@ -10,7 +10,7 @@ for, see the paths below.
 > **Packages:** @@PACKAGES@@.
 >
 > Distribution for **location** `@@LOCATION@@` (kind `@@LOCATION_KIND@@`).
-> Expected **installation directory** is `@@DIST_TARGET_PREFIX@@`.
+> Expected **installation directory** is `@@DIST_TARGET_PREFIX@@/`.
 >
 > Directories:
 >
