@@ -37,10 +37,10 @@ while (( $# != 0 )) {
 			;;
 
 		--build-dir)
-			option_wants_arg=build-dir
+			option_wants_arg=$option
 			;;
 		--build-dir=*)
-			param=${option#--builddir=}
+			param=${option#--*=}
 			builddir=${param:P}
 			;;
 		--no-build-dir)
@@ -51,10 +51,10 @@ while (( $# != 0 )) {
 			unset dist_output
 			;;
 		--output)
-			option_wants_arg=output
+			option_wants_arg=$option
 			;;
 		--output=*)
-			param=${option#--output=}
+			param=${option#--*=}
 			dist_output=$param
 			;;
 
@@ -66,26 +66,26 @@ while (( $# != 0 )) {
 			;;
 
 		--install-dir)
-			option_wants_arg=install-dir
+			option_wants_arg=$option
 			;;
 		--install-dir=*)
-			param=${option#--install-dir=}
+			param=${option#--*=}
 			installdir=$param
 			;;
 
 		--location)
-			option_wants_arg=location
+			option_wants_arg=$option
 			;;
 		--location=*)
-			param=${option#--location=}
+			param=${option#--*=}
 			location=$param
 			;;
 
 		--user-absolute-home)
-			option_wants_arg=user-absolute-home
+			option_wants_arg=$option
 			;;
 		--user-absolute-home=*)
-			param=${option#--user-absolute-home=}
+			param=${option#--*=}
 			user_abs_home=${~param}
 			;;
 
@@ -93,13 +93,13 @@ while (( $# != 0 )) {
 			unset packages
 			;;
 		--package)
-			option_wants_arg=package
+			option_wants_arg=$option
 			;;
 		--package=*)
 			if [[ ! -v packages ]] {
 				error Cannot combine --package with --uber-package.
 			}
-			param=${option#--package=}
+			param=${option#--*=}
 			packages+=$package
 			;;
 
