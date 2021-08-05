@@ -36,11 +36,15 @@ while (( $# != 0 )) {
 			unset strict
 			;;
 
-		--install)
-			install=1
+		--build-dir)
+			option_wants_arg=build-dir
 			;;
-		--no-install)
-			unset install
+		--build-dir=*)
+			param=${option#--builddir=}
+			builddir=${param:P}
+			;;
+		--no-build-dir)
+			unset builddir
 			;;
 
 		--no-output)
@@ -52,6 +56,21 @@ while (( $# != 0 )) {
 		--output=*)
 			param=${option#--output=}
 			dist_output=$param
+			;;
+
+		--no-install)
+			unset install
+			;;
+		--install)
+			install=1
+			;;
+
+		--install-dir)
+			option_wants_arg=install-dir
+			;;
+		--install-dir=*)
+			param=${option#--install-dir=}
+			installdir=$param
 			;;
 
 		--location)
@@ -131,10 +150,14 @@ if [[ $location != user-* && -n $user_abs_home ]] {
 	warning --user-absolute-home option is only effective for user-… locations.
 }
 
+if [[ ! -v install && -v installdir ]] {
+	warning --install-dir option is only effective when --install is enabled.
+}
+
 function location_absolute {
 	location_kind=absolute
 	location_prefix=${1%/}
-	dist_target_prefix=/
+	dist_target_prefix=
 
 	if [[ -v 2 ]] {
 		location_private_stem=$package_private_name
@@ -145,11 +168,11 @@ function location_user {
 	if [[ -n $user_abs_home ]] {
 		location_kind=absolute
 		location_prefix=${user_abs_home}/${1%/}
-		dist_target_prefix=/
+		dist_target_prefix=
 	} else {
 		location_kind=user-home-adaptive
 		location_prefix='${HOME}'/${1%/}
-		dist_target_prefix='${HOME}'/
+		dist_target_prefix='${HOME}'
 	}
 
 	if [[ -v 2 ]] {
@@ -160,7 +183,7 @@ function location_user {
 function location_test {
 	location_kind=test
 	location_prefix=${${:-$sourcedir/test-install}:P}
-	dist_target_prefix=$location_prefix/
+	dist_target_prefix=$location_prefix
 }
 
 case $location {
@@ -210,6 +233,9 @@ unfunction location_test
 
 if [[ -v debug ]] {
 	echo-log 'Location:' $location "($location_kind)."
+	echo-log '|- Prefix:           ' $location_prefix/
+	echo-log '|- Distib prefix:    ' $dist_target_prefix/
+	echo-log '|'
 	echo-log '|- Bindir:           ' $location_bindir
 	echo-log '|- Execdir (public): ' $location_execdir_public
 	echo-log '|- Execdir (private):' $location_execdir_private
@@ -218,32 +244,49 @@ if [[ -v debug ]] {
 	echo-log '|- Datadir (private):' $location_datadir_private
 }
 
-if [[ ! -v install && ! -v dist_output ]] {
-	error Nothing to do\; request installation via --install or/and distribution via --output.
+if [[ ! -v dist_output && ! -v builddir && ! -v install ]] {
+	error Nothing to do\; request at least one: \
+		$'\n\t'explicit build location via --builddir\; \
+		$'\n\t'distribution output via --output\; \
+		$'\n\t'immediate installation via --install.
 }
 
 echo-log Preparing build.
 
-builddir=${$(mktemp -d --tmpdir ldvsoft-env_mk-dist.XXXX)%/}
+if [[ ! -v builddir ]] {
+	builddir=${$(mktemp -d --tmpdir ldvsoft-env_mk-dist.XXXX)%/}
 
-TRAPZERR TRAPEXIT () {
-	rm -rf $builddir
+	TRAPZERR TRAPEXIT () {
+		rm -rf $builddir
+	}
+} else {
+	(
+		setopt NULL_GLOB
+		rm -rf $builddir/* $builddir/.*
+	)
 }
 
 echo-log Build at $builddir.
 
 function build-dir {
-	local full=$builddir/${1#$dist_target_prefix}
-	if [[ -d $full ]] { return }
-	mkdir $full
+	local trg=$builddir/${1#$dist_target_prefix/}
+
+	if [[ -d $trg ]] { return }
+	if [[ -v 2 ]] {
+		mkdir -p $trg
+	} else {
+		mkdir $trg
+	}
 }
 
 function build-file {
 	local src=$1
-	local trg=$builddir/${2#$dist_target_prefix}
+	local trg=$builddir/${2#$dist_target_prefix/}
 	if [[ -v 3 ]] {
 		local extended=1
 	}
+
+	if [[ ! -f $src ]] { return }
 
 	cp $src $trg
 	sed -i \
@@ -256,7 +299,13 @@ function build-file {
 		$trg
 	if [[ -v extended ]] {
 		sed -i \
-			-e "s:@@PACKAGES@@:$packages:" \
+			-e "s:@@BINDIR!DIST@@:${location_bindir#$dist_target_prefix/}:" \
+			-e "s:@@EXECDIR_PUBLIC!DIST@@:${location_execdir_public#$dist_target_prefix/}:" \
+			-e "s:@@EXECDIR_PRIVATE!DIST@@:${location_execdir_private#$dist_target_prefix/}:" \
+			-e "s:@@LIBDIR_PUBLIC!DIST@@:${location_libdir_public#$dist_target_prefix/}:" \
+			-e "s:@@LIBDIR_PRIVATE!DIST@@:${location_libdir_private#$dist_target_prefix/}:" \
+			-e "s:@@DATADIR_PRIVATE!DIST@@:${location_datadir_private#$dist_target_prefix/}:" \
+			-e "s:@@PACKAGES@@:${(j:, :)packages}:" \
 			-e "s:@@LOCATION@@:$location:" \
 			-e "s:@@LOCATION_KIND@@:$location_kind:" \
 			-e "s:@@DIST_TARGET_PREFIX@@:$dist_target_prefix:" \
@@ -270,8 +319,7 @@ function build-fhs-dir {
 
 	if [[ ! -d $dir ]] { return }
 
-	local full=$builddir/${trg#$dist_target_prefix}
-	if [[ ! -d $full ]] { mkdir -p $full }
+	build-dir $trg +
 
 	(
 		setopt NULL_GLOB
@@ -287,11 +335,12 @@ function build-fhs-dir {
 	)
 }
 
-build-file ${0:h}/dist-README.md README.md +
+build-file $sourcedir/dist-install install +
+build-file $sourcedir/dist-README.md README.md +
 for p ( $packages ) {
-	build-fhs-dir $sourcedir/$p/bin $location_bindir
+	build-fhs-dir $sourcedir/$p/bin         $location_bindir
 	build-fhs-dir $sourcedir/$p/lib-private $location_libdir_private
-	build-fhs-dir $sourcedir/$p/data $location_datadir_private
+	build-fhs-dir $sourcedir/$p/data        $location_datadir_private
 	# TODO other dirs
 }
 
@@ -313,8 +362,8 @@ if [[ ! -v install ]] {
 	exit
 }
 
-echo-log Preparing install.
+echo-log Executing install.
 
-# TODO this is not a proper way...
-cp -r $builddir/* ${(e)dist_target_prefix}
-echo Install completed.
+DESTDIR=${DESTDIR:-} $builddir/install
+
+echo Installation done.

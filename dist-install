@@ -1,0 +1,37 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NULL_GLOB EXTENDED_GLOB NO_UNSET
+
+cmdprefix=(${(@)CMDPREFIX:-})
+installer=($cmdprefix cp -r --preserve=timestamps)
+sourcedir=${0:h}
+
+function install-dir {
+	local dir=${1#/}
+	local mode=$2
+
+	if [[ ! -d $sourcedir/$dir ]] { return }
+
+	local src=$sourcedir/$dir
+	local trg=${${DESTDIR:-}%/}"@@DIST_TARGET_PREFIX@@"/$dir
+
+	case $mode {
+		public)
+			local exclude=$sourcedir/${${3:-/CANNOT-MATCH-A-THING}#/}
+			$installer $src/*~$exclude $trg
+			;;
+		private)
+			[[ -d $trg ]] || $cmdprefix mkdir $trg
+			$installer $src/* $trg
+			;;
+		*)
+			exit 1
+			;;
+	}
+}
+
+install-dir "@@BINDIR!DIST@@"          public
+install-dir "@@LIBDIR_PUBLIC!DIST@@"   public  "@@LIBDIR_PRIVATE!DIST@@"
+install-dir "@@LIBDIR_PRIVATE!DIST@@"  private
+install-dir "@@EXECDIR_PUBLIC!DIST@@"  public  "@@EXECDIR_PRIVATE!DIST@@"
+install-dir "@@EXECDIR_PRIVATE!DIST@@" private
+install-dir "@@DATADIR_PRIVATE!DIST@@" private
