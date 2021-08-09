@@ -2,7 +2,7 @@
 setopt ERR_EXIT NULL_GLOB
 
 system_locations=(system-root system-usr system-local system-opt)
-user_locations=(user-local user-opt)
+user_locations=(user-xdg user-local user-opt)
 extra_locations=(test-install)
 
 cd ${0:h}
@@ -35,3 +35,4 @@ for location ($user_locations) {
 	process $location ${location}_$USER "$location (absolute home, for $USER)" --user-absolute-home=$HOME $@
 }
 process absolute@/absolute/path/ absolute "absolute@/absolute/path"
+XDG_DATA_HOME=${HOME}/.share process user-xdg user-xdg_alt "user-xdg (alt XDG_DATA_HOME)" $@

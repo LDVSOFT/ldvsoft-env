@@ -191,6 +191,11 @@ function location_user {
 	dist_location_prefix='${HOME}'
 
 	location_set_private_stem $2
+
+	if [[ ${3-} = xdg ]] {
+		location_datadir_private='${XDG_DATA_HOME-${HOME}/.local/share}/'${location_private_stem-private}
+		dist_location_datadir_private=.local/share/${location_private_stem-private}
+	}
 }
 
 function location_test {
@@ -213,7 +218,10 @@ case $location {
 		location_absolute /opt/$package_private_name private
 		;;
 	user-xdg)
-		error Location $param is not implemented.
+		if [[ -v user_abs_home ]] {
+			error --user-xdg with --user-abs-home sounds like a bad idea and is not supported.
+		}
+		location_user .local public xdg
 		;;
 	user-local)
 		location_user .local public
@@ -237,7 +245,6 @@ location_libdir_public=$location_prefix/lib
 location_libdir_private=$location_libdir_public/${location_private_stem-private}
 location_execdir_public=$location_prefix/libexec
 location_execdir_private=$location_execdir_public/${location_private_stem-private}
-# TODO: expression support for user-xdg
 if [[ ! -v location_datadir_private ]] {
 	location_datadir_private=$location_prefix/share${location_private_stem+/$location_private_stem}
 }
