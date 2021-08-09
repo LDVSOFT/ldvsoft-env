@@ -34,4 +34,4 @@ for location ($system_locations $user_locations $extra_locations) {
 for location ($user_locations) {
 	process $location ${location}_$USER "$location (absolute home, for $USER)" --user-absolute-home=$HOME $@
 }
-process absolute@/ldvsoft-env absolute "absolute@/ldvsoft-env"
+process absolute@/absolute/path/ absolute "absolute@/absolute/path"

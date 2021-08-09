@@ -44,16 +44,18 @@ sourcedir=${0:h}
 
 function install-dir {
 	local dir=${1#/}
-	local mode=$2
+	local installdir=${2#/}
+	local mode=$3
+	local exclude=${4-/CANNOT-MATCH-A-THING}
 
 	if [[ ! -d $sourcedir/$dir ]] { return }
 
 	local src=$sourcedir/$dir
-	local trg=${${DESTDIR:-}%/}"@@DIST_TARGET_PREFIX@@"/$dir
+	local trg=${${DESTDIR:-}%/}/$installdir
 
 	case $mode {
 		public)
-			local exclude=$sourcedir/${${3:-/CANNOT-MATCH-A-THING}#/}
+			local exclude=$sourcedir/${exclude#/}
 			[[ -d $trg ]] || [[ -v mkdir_public ]] && mkdir -p $trg
 			targets=($src/*~$exclude)
 			if (( $#targets != 0 )) {
@@ -74,9 +76,9 @@ function install-dir {
 	}
 }
 
-install-dir "@@BINDIR!DIST@@"          public
-install-dir "@@LIBDIR_PUBLIC!DIST@@"   public  "@@LIBDIR_PRIVATE!DIST@@"
-install-dir "@@LIBDIR_PRIVATE!DIST@@"  private
-install-dir "@@EXECDIR_PUBLIC!DIST@@"  public  "@@EXECDIR_PRIVATE!DIST@@"
-install-dir "@@EXECDIR_PRIVATE!DIST@@" private
-install-dir "@@DATADIR_PRIVATE!DIST@@" private
+install-dir '@@BINDIR!DIST@@'          "@@BINDIR@@"          public
+install-dir '@@LIBDIR_PUBLIC!DIST@@'   "@@LIBDIR_PUBLIC@@"   public  "@@LIBDIR_PRIVATE!DIST@@"
+install-dir '@@LIBDIR_PRIVATE!DIST@@'  "@@LIBDIR_PRIVATE@@"  private
+install-dir '@@EXECDIR_PUBLIC!DIST@@'  "@@EXECDIR_PUBLIC@@"  public  "@@EXECDIR_PRIVATE!DIST@@"
+install-dir '@@EXECDIR_PRIVATE!DIST@@' "@@EXECDIR_PRIVATE@@" private
+install-dir '@@DATADIR_PRIVATE!DIST@@' "@@DATADIR_PRIVATE@@" private

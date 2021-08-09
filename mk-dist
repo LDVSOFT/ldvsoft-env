@@ -159,62 +159,70 @@ if [[ ! -v install && $#installopts != 0 ]] {
 	warning --install-… options are only effective when --install is enabled.
 }
 
+function location_set_private_stem {
+	case $1 {
+		public)
+			location_private_stem=$package_private_name
+			;;
+		private)
+			;;
+		*)
+			error Wrong parameter $2.
+			;;
+	}
+}
+
 function location_absolute {
 	location_kind=absolute
 	location_prefix=${1%/}
-	dist_target_prefix=
+	dist_location_prefix=
 
-	if [[ -v 2 ]] {
-		location_private_stem=$package_private_name
-	}
+	location_set_private_stem $2
 }
 
 function location_user {
 	if [[ -n $user_abs_home ]] {
-		location_kind=absolute
-		location_prefix=${user_abs_home}/${1%/}
-		dist_target_prefix=
-	} else {
-		location_kind=user-home-adaptive
-		location_prefix='${HOME}'/${1%/}
-		dist_target_prefix='${HOME}'
+		location_absolute ${user_abs_home}/$1 $2
+		return
 	}
 
-	if [[ -v 2 ]] {
-		location_private_stem=$package_private_name
-	}
+	location_kind=user-home-adaptive
+	location_prefix='${HOME}'/${1%/}
+	dist_location_prefix='${HOME}'
+
+	location_set_private_stem $2
 }
 
 function location_test {
 	location_kind=test
 	location_prefix=${${:-$sourcedir/test-install}:P}
-	dist_target_prefix=$location_prefix
+	dist_location_prefix=$location_prefix
 }
 
 case $location {
 	system-root)
-		location_absolute '' +
+		location_absolute '' public
 		;;
 	system-usr)
-		location_absolute /usr +
+		location_absolute /usr public
 		;;
 	system-local)
-		location_absolute /usr/local +
+		location_absolute /usr/local public
 		;;
 	system-opt)
-		location_absolute /opt/$package_private_name
+		location_absolute /opt/$package_private_name private
 		;;
 	user-xdg)
 		error Location $param is not implemented.
 		;;
 	user-local)
-		location_user .local +
+		location_user .local public
 		;;
 	user-opt)
-		location_user .local/opt/$package_private_name
+		location_user .local/opt/$package_private_name private
 		;;
 	absolute@*)
-		location_absolute ${${location#absolute@}:P}
+		location_absolute ${${location#absolute@}:P} private
 		;;
 	test-install)
 		location_test
@@ -230,7 +238,18 @@ location_libdir_private=$location_libdir_public/${location_private_stem-private}
 location_execdir_public=$location_prefix/libexec
 location_execdir_private=$location_execdir_public/${location_private_stem-private}
 # TODO: expression support for user-xdg
-location_datadir_private=$location_prefix/share${location_private_stem+/$location_private_stem}
+if [[ ! -v location_datadir_private ]] {
+	location_datadir_private=$location_prefix/share${location_private_stem+/$location_private_stem}
+}
+
+dist_location_bindir=${location_bindir#$dist_location_prefix/}
+dist_location_libdir_public=${location_libdir_public#$dist_location_prefix/}
+dist_location_libdir_private=${location_libdir_private#$dist_location_prefix/}
+dist_location_execdir_public=${location_execdir_public#$dist_location_prefix/}
+dist_location_execdir_private=${location_execdir_private#$dist_location_prefix/}
+if [[ ! -v dist_location_datadir_private ]] {
+	dist_location_datadir_private=${location_datadir_private#$dist_location_prefix/}
+}
 
 unfunction location_absolute
 unfunction location_user
@@ -239,7 +258,7 @@ unfunction location_test
 if [[ -v debug ]] {
 	echo-log 'Location:' $location "($location_kind)."
 	echo-log '|- Prefix:           ' $location_prefix/
-	echo-log '|- Distib prefix:    ' $dist_target_prefix/
+	echo-log '|- Distib prefix:    ' $dist_location_prefix/
 	echo-log '|'
 	echo-log '|- Bindir:           ' $location_bindir
 	echo-log '|- Execdir (public): ' $location_execdir_public
@@ -274,7 +293,7 @@ if [[ ! -v builddir ]] {
 echo-log Build at $builddir.
 
 function build-dir {
-	local trg=$builddir/${1#$dist_target_prefix/}
+	local trg=$builddir/$1
 
 	if [[ -d $trg ]] { return }
 	if [[ -v 2 ]] {
@@ -286,7 +305,7 @@ function build-dir {
 
 function build-file {
 	local src=$1
-	local trg=$builddir/${2#$dist_target_prefix/}
+	local trg=$builddir/$2
 	if [[ -v 3 ]] {
 		local extended=1
 	}
@@ -298,26 +317,26 @@ function build-file {
 
 	cp $src $trg
 	sed -i \
-		-e "s:@@BINDIR@@:$location_bindir:" \
-		-e "s:@@EXECDIR_PUBLIC@@:$location_execdir_public:" \
-		-e "s:@@EXECDIR_PRIVATE@@:$location_execdir_private:" \
-		-e "s:@@LIBDIR_PUBLIC@@:$location_libdir_public:" \
-		-e "s:@@LIBDIR_PRIVATE@@:$location_libdir_private:" \
-		-e "s:@@DATADIR_PRIVATE@@:$location_datadir_private:" \
-		-e "s:@@PRIVATE_NAME@@:$package_private_name:" \
+		-e "s:@@BINDIR@@:$location_bindir:g" \
+		-e "s:@@EXECDIR_PUBLIC@@:$location_execdir_public:g" \
+		-e "s:@@EXECDIR_PRIVATE@@:$location_execdir_private:g" \
+		-e "s:@@LIBDIR_PUBLIC@@:$location_libdir_public:g" \
+		-e "s:@@LIBDIR_PRIVATE@@:$location_libdir_private:g" \
+		-e "s:@@DATADIR_PRIVATE@@:$location_datadir_private:g" \
+		-e "s:@@PRIVATE_NAME@@:$package_private_name:g" \
 		$trg
 	if [[ -v extended ]] {
 		sed -i \
-			-e "s:@@BINDIR!DIST@@:${location_bindir#$dist_target_prefix/}:" \
-			-e "s:@@EXECDIR_PUBLIC!DIST@@:${location_execdir_public#$dist_target_prefix/}:" \
-			-e "s:@@EXECDIR_PRIVATE!DIST@@:${location_execdir_private#$dist_target_prefix/}:" \
-			-e "s:@@LIBDIR_PUBLIC!DIST@@:${location_libdir_public#$dist_target_prefix/}:" \
-			-e "s:@@LIBDIR_PRIVATE!DIST@@:${location_libdir_private#$dist_target_prefix/}:" \
-			-e "s:@@DATADIR_PRIVATE!DIST@@:${location_datadir_private#$dist_target_prefix/}:" \
-			-e "s:@@PACKAGES@@:${(j:, :)packages}:" \
-			-e "s:@@LOCATION@@:$location:" \
-			-e "s:@@LOCATION_KIND@@:$location_kind:" \
-			-e "s:@@DIST_TARGET_PREFIX@@:$dist_target_prefix:" \
+			-e "s:@@BINDIR!DIST@@:$dist_location_bindir:g" \
+			-e "s:@@EXECDIR_PUBLIC!DIST@@:$dist_location_execdir_public:g" \
+			-e "s:@@EXECDIR_PRIVATE!DIST@@:$dist_location_execdir_private:g" \
+			-e "s:@@LIBDIR_PUBLIC!DIST@@:$dist_location_libdir_public:g" \
+			-e "s:@@LIBDIR_PRIVATE!DIST@@:$dist_location_libdir_private:g" \
+			-e "s:@@DATADIR_PRIVATE!DIST@@:$dist_location_datadir_private:g" \
+			-e "s:@@PACKAGES@@:${(j:, :)packages}:g" \
+			-e "s:@@LOCATION@@:$location:g" \
+			-e "s:@@LOCATION_KIND@@:$location_kind:g" \
+			-e "s:@@DIST_LOCATION_PREFIX@@:$dist_location_prefix:g" \
 			$trg
 	}
 }
@@ -347,11 +366,12 @@ function build-fhs-dir {
 build-file $sourcedir/dist-install install +
 build-file $sourcedir/dist-README.md README.md +
 for p ( $packages ) {
-	build-fhs-dir $sourcedir/$p/bin          $location_bindir
-	build-fhs-dir $sourcedir/$p/exec-private $location_execdir_private
-	build-fhs-dir $sourcedir/$p/lib-private  $location_libdir_private
-	build-fhs-dir $sourcedir/$p/data         $location_datadir_private
-	# TODO other dirs
+	build-fhs-dir $sourcedir/$p/bin          $dist_location_bindir
+	build-fhs-dir $sourcedir/$p/lib-public   $dist_location_libdir_public
+	build-fhs-dir $sourcedir/$p/lib-private  $dist_location_libdir_private
+	build-fhs-dir $sourcedir/$p/exec-public  $dist_location_execdir_public
+	build-fhs-dir $sourcedir/$p/exec-private $dist_location_execdir_private
+	build-fhs-dir $sourcedir/$p/data         $dist_location_datadir_private
 }
 
 unfunction build-dir
