@@ -1,0 +1,11 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NO_UNSET
+
+source "@@DATADIR_PRIVATE@@/runtime-directories.zsh"
+source "@@DATADIR_PRIVATE@@/locate-configs.zsh"
+
+what_glob=$1
+locate-configs $what_glob
+for f ( $reply ) {
+	echo $f
+}

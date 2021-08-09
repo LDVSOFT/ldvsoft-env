@@ -1,15 +1,17 @@
 #!/usr/bin/env zsh
-setopt -e
+setopt ERR_EXIT NO_UNSET
 
 expected_install_dir="@@BINDIR@@"
 actual_install_dir=${0:A:h}
 
 if [[ $expected_install_dir != $actual_install_dir ]] {
 	echo Installation is broken! >&2
-	echo $'\t'Expected installation location: $expected_install_dir
-	echo $'\t'Actual installaton location:    $actual_install_dir
+	echo $'\t''Expected installation location:' $expected_install_dir
+	echo $'\t''Actual installaton location:   ' $actual_install_dir
 	exit 2
 }
+
+source "@@DATADIR_PRIVATE@@/runtime-directories.zsh"
 
 if (( $# == 0 )) {
 	echo Command not given. >&2
@@ -17,8 +19,18 @@ if (( $# == 0 )) {
 }
 command=$1; shift
 
+source "@@DATADIR_PRIVATE@@/locate-configs.zsh"
+
 case $command {
+	--version|version)
+		echo LDVSoft environment manager. Version TODO.
+		;;
 	*)
-		echo Unknown command $command. >&2
-		exit 1
+		extension_command_file="@@DATADIR_PRIVATE@@/ldvsoft-env-$command.zsh"
+		if [[ -f $extension_command_file ]] {
+			source $extension_command_file
+		} else {
+			echo Unknown command $command. >&2
+			exit 1
+		}
 }

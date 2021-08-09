@@ -292,6 +292,9 @@ function build-file {
 	}
 
 	if [[ ! -f $src ]] { return }
+	if [[ -f $trg ]] {
+		error While building file $src already found built file with same target name.
+	}
 
 	cp $src $trg
 	sed -i \
@@ -301,6 +304,7 @@ function build-file {
 		-e "s:@@LIBDIR_PUBLIC@@:$location_libdir_public:" \
 		-e "s:@@LIBDIR_PRIVATE@@:$location_libdir_private:" \
 		-e "s:@@DATADIR_PRIVATE@@:$location_datadir_private:" \
+		-e "s:@@PRIVATE_NAME@@:$package_private_name:" \
 		$trg
 	if [[ -v extended ]] {
 		sed -i \
@@ -343,9 +347,10 @@ function build-fhs-dir {
 build-file $sourcedir/dist-install install +
 build-file $sourcedir/dist-README.md README.md +
 for p ( $packages ) {
-	build-fhs-dir $sourcedir/$p/bin         $location_bindir
-	build-fhs-dir $sourcedir/$p/lib-private $location_libdir_private
-	build-fhs-dir $sourcedir/$p/data        $location_datadir_private
+	build-fhs-dir $sourcedir/$p/bin          $location_bindir
+	build-fhs-dir $sourcedir/$p/exec-private $location_execdir_private
+	build-fhs-dir $sourcedir/$p/lib-private  $location_libdir_private
+	build-fhs-dir $sourcedir/$p/data         $location_datadir_private
 	# TODO other dirs
 }
 

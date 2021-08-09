@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NO_UNSET
+
+source "@@DATADIR_PRIVATE@@/runtime-directories.zsh"
+source "@@DATADIR_PRIVATE@@/locate-configs.zsh"
+
+locate-configs 'tmux.conf.d/*.conf'
+
+target=$user_runtimedir/tmux.conf-rendered
+mkdir -p ${target:h}
+rm -f $target
+for f ( $reply ) {
+	cat $f >>$target
+}

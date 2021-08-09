@@ -1,7 +1,9 @@
 #!/usr/bin/env zsh
-setopt ERR_EXIT
+setopt ERR_EXIT NULL_GLOB
 
 cd ${0:h}
-rm -rf test-install
-mkdir test-install
+if [[ ! -d test-install ]] {
+	mkdir test-install
+}
+rm -rf test-install/*(D)
 ./mk-dist --location=test-install --install --uber-package --install-mkdir $@

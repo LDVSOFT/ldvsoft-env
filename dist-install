@@ -55,12 +55,18 @@ function install-dir {
 		public)
 			local exclude=$sourcedir/${${3:-/CANNOT-MATCH-A-THING}#/}
 			[[ -d $trg ]] || [[ -v mkdir_public ]] && mkdir -p $trg
-			$installer $src/*~$exclude $trg
+			targets=($src/*~$exclude)
+			if (( $#targets != 0 )) {
+				$installer $targets $trg
+			}
 			;;
 		private)
 			[[ -d ${trg:h} ]] || [[ -v mkdir_public ]] && mkdir -p ${trg:h}
 			[[ -d $trg ]] || $cmdprefix mkdir $trg
-			$installer $src/* $trg
+			targets=($src/*)
+			if (( $#targets != 0 )) {
+				$installer $targets $trg
+			}
 			;;
 		*)
 			exit 1
