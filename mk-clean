@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+setopt ERR_EXIT NO_UNSET
+
+cd ${0:h}
+rm -rf build/ test-dists/ test-install/

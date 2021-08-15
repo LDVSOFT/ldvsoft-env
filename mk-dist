@@ -12,6 +12,11 @@ function error {
 installopts=()
 packages=()
 user_abs_home=
+function {
+	local metas=($sourcedir/*/meta.zsh(.))
+	all_packages=(${metas:h:t})
+}
+
 while (( $# != 0 )) {
 	option=$1
 	if [[ $option =~ '^[^-]\.*' && ! -v option_wants_arg ]] {
@@ -105,6 +110,9 @@ while (( $# != 0 )) {
 				error Cannot combine --package with --uber-package.
 			}
 			param=${option#--*=}
+			if (( ! $all_packages[(Ie)$param] )) {
+				error Uknown package $param.
+			}
 			packages+=$param
 			;;
 
@@ -136,14 +144,7 @@ if [[ ! -v location ]] {
 
 if [[ ! -v packages ]] {
 	# Uber
-	packages=(core)
-	for f ( $sourcedir/*(/) ) {
-		local package=${f:t}
-		if [[ -f $sourcedir/$package/data/install/$package.zsh ]] {
-			packages+=$package
-		}
-	}
-	unset f
+	packages=($all_packages)
 	echo-log Detected packages: $packages.
 }
 
@@ -366,6 +367,7 @@ function build-fhs-dir {
 build-file $sourcedir/dist-install install +
 build-file $sourcedir/dist-README.md README.md +
 for p ( $packages ) {
+	echo-log Building package $p…
 	build-fhs-dir $sourcedir/$p/bin          $dist_location_bindir
 	build-fhs-dir $sourcedir/$p/lib-public   $dist_location_libdir_public
 	build-fhs-dir $sourcedir/$p/lib-private  $dist_location_libdir_private
