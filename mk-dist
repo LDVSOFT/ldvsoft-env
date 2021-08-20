@@ -9,6 +9,7 @@ function error {
 	exit 1
 }
 
+debug=0
 installopts=()
 packages=()
 user_abs_home=
@@ -29,10 +30,10 @@ while (( $# != 0 )) {
 	}
 	case $option {
 		-v|--verbose)
-			debug=1
+			debug=$((debug + 1))
 			;;
-		--no-verbose)
-			unset debug
+		-q|--quiet)
+			debug=$((debug - 1))
 			;;
 
 		--strict)
@@ -121,9 +122,14 @@ while (( $# != 0 )) {
 	}
 }
 
-function echo-log {
-	if [[ ! -v debug ]] { return }
-	echo '[log]' $@ >&2
+function echo-info {
+	if (( debug < 1 )) { return }
+	echo '[info]' $@ >&2
+}
+
+function echo-debug {
+	if (( debug < 2 )) { return }
+	echo '[debug]' $@ >&2
 }
 
 function warning {
@@ -145,7 +151,7 @@ if [[ ! -v location ]] {
 if [[ ! -v packages ]] {
 	# Uber
 	packages=($all_packages)
-	echo-log Detected packages: $packages.
+	echo-info Detected packages: $packages.
 }
 
 if (( $#packages == 0 )) {
@@ -256,17 +262,17 @@ unfunction location_absolute
 unfunction location_user
 unfunction location_test
 
-if [[ -v debug ]] {
-	echo-log 'Location:' $location "($location_kind)."
-	echo-log '|- Prefix:           ' $location_prefix/
-	echo-log '|- Distib prefix:    ' $dist_location_prefix/
-	echo-log '|'
-	echo-log '|- Bindir:           ' $location_bindir
-	echo-log '|- Execdir (public): ' $location_execdir_public
-	echo-log '|- Execdir (private):' $location_execdir_private
-	echo-log '|- Libdir (public):  ' $location_libdir_public
-	echo-log '|- Libdir (private): ' $location_libdir_private
-	echo-log '|- Datadir (private):' $location_datadir_private
+if (( debug >= 1 )) {
+	echo-info 'Location:' $location "($location_kind)."
+	echo-info '|- Prefix:           ' $location_prefix/
+	echo-info '|- Distib prefix:    ' $dist_location_prefix/
+	echo-info '|'
+	echo-info '|- Bindir:           ' $location_bindir
+	echo-info '|- Execdir (public): ' $location_execdir_public
+	echo-info '|- Execdir (private):' $location_execdir_private
+	echo-info '|- Libdir (public):  ' $location_libdir_public
+	echo-info '|- Libdir (private): ' $location_libdir_private
+	echo-info '|- Datadir (private):' $location_datadir_private
 }
 
 if [[ ! -v dist_output && ! -v builddir && ! -v install ]] {
@@ -276,7 +282,7 @@ if [[ ! -v dist_output && ! -v builddir && ! -v install ]] {
 		$'\n\t'immediate installation via --install.
 }
 
-echo-log Preparing build.
+echo-info Preparing build.
 
 if [[ ! -v builddir ]] {
 	builddir=${$(mktemp -d --tmpdir ldvsoft-env_mk-dist.XXXX)%/}
@@ -285,13 +291,16 @@ if [[ ! -v builddir ]] {
 		rm -rf $builddir
 	}
 } else {
-	(
-		setopt NULL_GLOB
+	if [[ ! -d $builddir ]] {
+		error Build dir $builddir does not exist.
+	}
+	function {
+		setopt LOCAL_OPTIONS NULL_GLOB
 		rm -rf $builddir/* $builddir/.*
-	)
+	}
 }
 
-echo-log Build at $builddir.
+echo-info Build at $builddir.
 
 function build-dir {
 	local trg=$builddir/$1
@@ -317,28 +326,9 @@ function build-file {
 	}
 
 	cp $src $trg
-	sed -i \
-		-e "s:@@BINDIR@@:$location_bindir:g" \
-		-e "s:@@EXECDIR_PUBLIC@@:$location_execdir_public:g" \
-		-e "s:@@EXECDIR_PRIVATE@@:$location_execdir_private:g" \
-		-e "s:@@LIBDIR_PUBLIC@@:$location_libdir_public:g" \
-		-e "s:@@LIBDIR_PRIVATE@@:$location_libdir_private:g" \
-		-e "s:@@DATADIR_PRIVATE@@:$location_datadir_private:g" \
-		-e "s:@@PRIVATE_NAME@@:$package_private_name:g" \
-		$trg
+	sed -i -e ${(ej:;:)replacements} $trg
 	if [[ -v extended ]] {
-		sed -i \
-			-e "s:@@BINDIR!DIST@@:$dist_location_bindir:g" \
-			-e "s:@@EXECDIR_PUBLIC!DIST@@:$dist_location_execdir_public:g" \
-			-e "s:@@EXECDIR_PRIVATE!DIST@@:$dist_location_execdir_private:g" \
-			-e "s:@@LIBDIR_PUBLIC!DIST@@:$dist_location_libdir_public:g" \
-			-e "s:@@LIBDIR_PRIVATE!DIST@@:$dist_location_libdir_private:g" \
-			-e "s:@@DATADIR_PRIVATE!DIST@@:$dist_location_datadir_private:g" \
-			-e "s:@@PACKAGES@@:${(j:, :)packages}:g" \
-			-e "s:@@LOCATION@@:$location:g" \
-			-e "s:@@LOCATION_KIND@@:$location_kind:g" \
-			-e "s:@@DIST_LOCATION_PREFIX@@:$dist_location_prefix:g" \
-			$trg
+		sed -i -e ${(ej:;:)extended_replacements} $trg
 	}
 }
 
@@ -350,39 +340,90 @@ function build-fhs-dir {
 
 	build-dir $trg +
 
-	(
+	function {
 		setopt NULL_GLOB
-		cd $dir
+		pushd $dir
+		function TRAPEXIT {
+			popd
+		}
+
 		local f
 		for f ( **/* ) {
+			echo-debug Looking at $f from $dir.
 			if [[ -d $f ]] {
 				build-dir $trg/$f
 			} elif [[ -f $f ]] {
 				build-file $f $trg/$f
 			}
 		}
-	)
+	}
 }
 
+base_replacements=(
+	's:@@BINDIR@@:$location_bindir:g'
+	's:@@EXECDIR_PUBLIC@@:$location_execdir_public:g'
+	's:@@EXECDIR_PRIVATE@@:$location_execdir_private:g'
+	's:@@LIBDIR_PUBLIC@@:$location_libdir_public:g'
+	's:@@LIBDIR_PRIVATE@@:$location_libdir_private:g'
+	's:@@DATADIR_PRIVATE@@:$location_datadir_private:g'
+	's:@@PRIVATE_NAME@@:$package_private_name:g'
+	's:@@DEPENDENCIES@@:${(j: :)dependencies-}:g'
+)
+extended_replacements=(
+	's:@@BINDIR!DIST@@:$dist_location_bindir:g'
+	's:@@EXECDIR_PUBLIC!DIST@@:$dist_location_execdir_public:g'
+	's:@@EXECDIR_PRIVATE!DIST@@:$dist_location_execdir_private:g'
+	's:@@LIBDIR_PUBLIC!DIST@@:$dist_location_libdir_public:g'
+	's:@@LIBDIR_PRIVATE!DIST@@:$dist_location_libdir_private:g'
+	's:@@DATADIR_PRIVATE!DIST@@:$dist_location_datadir_private:g'
+	's:@@PACKAGES@@:${(j:, :)packages}:g'
+	's:@@LOCATION@@:$location:g'
+	's:@@LOCATION_KIND@@:$location_kind:g'
+	's:@@DIST_LOCATION_PREFIX@@:$dist_location_prefix:g'
+)
+
+replacements=($base_replacements)
 build-file $sourcedir/dist-install install +
 build-file $sourcedir/dist-README.md README.md +
+unset replacements
 for p ( $packages ) {
-	echo-log Building package $p…
-	build-fhs-dir $sourcedir/$p/bin          $dist_location_bindir
-	build-fhs-dir $sourcedir/$p/lib-public   $dist_location_libdir_public
-	build-fhs-dir $sourcedir/$p/lib-private  $dist_location_libdir_private
-	build-fhs-dir $sourcedir/$p/exec-public  $dist_location_execdir_public
-	build-fhs-dir $sourcedir/$p/exec-private $dist_location_execdir_private
-	build-fhs-dir $sourcedir/$p/data         $dist_location_datadir_private
+	function {
+		echo-info Building package $p…
+
+		local description
+		local dependencies=()
+		local replacements=($base_replacements)
+
+		function add-replacement {
+		replacements+=(s:@@$1@@:$2:g)
+		}
+
+		source $sourcedir/$p/meta.zsh
+
+		if [[ $p != core ]] {
+			echo-info hiii
+			dependencies+=(core)
+		}
+		unfunction add-replacement
+		echo-info '  Dependencies:' $dependencies
+		echo-debug Replacements:$'\n ' ${(epj:\n  :)replacements}
+
+		build-fhs-dir $sourcedir/$p/bin          $dist_location_bindir
+		build-fhs-dir $sourcedir/$p/lib-public   $dist_location_libdir_public
+		build-fhs-dir $sourcedir/$p/lib-private  $dist_location_libdir_private
+		build-fhs-dir $sourcedir/$p/exec-public  $dist_location_execdir_public
+		build-fhs-dir $sourcedir/$p/exec-private $dist_location_execdir_private
+		build-fhs-dir $sourcedir/$p/data         $dist_location_datadir_private
+	}
 }
 
 unfunction build-dir
 unfunction build-file
 unfunction build-fhs-dir
 
-if [[ -v debug ]] (
+if (( debug >= 1 )) (
 	cd $builddir
-	tree -a
+	exec tree -a
 )
 
 if [[ -v dist_output ]] {
@@ -394,7 +435,7 @@ if [[ ! -v install ]] {
 	exit
 }
 
-echo-log Executing install.
+echo-info Executing install.
 
 $builddir/install $installopts
 

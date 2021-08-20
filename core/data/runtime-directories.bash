@@ -12,8 +12,8 @@ typeset system_runtimedir="/run/@@PRIVATE_NAME@@"
 
 # Lists:
 typeset configs_locations=(
-	@@DATADIR_PRIVATE@@
-	$system_configdir
+	"@@DATADIR_PRIVATE@@"
+	"$system_configdir"
 	# TODO: XDG_CONFIG_DIRS?
-	$user_configdir
+	"$user_configdir"
 )

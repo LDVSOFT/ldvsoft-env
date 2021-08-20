@@ -1,0 +1,34 @@
+function bashrc-init {
+	unset -f bashrc-init
+
+	shopt -q nullglob
+	local nullglob_check=$?
+	shopt -s nullglob
+
+	source "@@DATADIR_PRIVATE@@/runtime-directories.bash"
+	local -A files
+	for d in "${configs_locations[@]}" ; do
+		for f in "$d"/shrc.d/*.sh "$d"/bashrc.d/*.bash ; do
+			if [ ! -f "$f" ] ; then continue ; fi
+			local name="$(basename "${f%.*}")"
+			files["$name"]="$f"
+		done
+	done
+
+	local -a files_sorted
+	mapfile -d '' files_sorted < <(printf '%s\0' "${!files[@]}" | sort -z)
+
+	local -a files_final
+	for f in "${files_sorted[@]}" ; do
+		files_final+=("${files["$f"]}")
+	done
+
+	for f in "${files_final[@]}" ; do
+		source "$f"
+	done
+
+	if [[ "$nullglob_check" -ne 0 ]] ; then
+		shopt -u nullglob
+	fi
+}
+bashrc-init

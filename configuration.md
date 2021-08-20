@@ -58,6 +58,15 @@ pieces and then only change several pieces in a next layer.
 >
 > `systemd` does that because the whole configuration of a unit must be a single file.
 
+Already existing configuration
+------------------------------
+
+While just using a couple of layers for internal configuration of a package is fine, some tools
+already have well-defined drop-in points and system-provided files. The question arises how should
+I adapt to this: be included as a part of this all or replace the loader and manage the existing
+configuration as a part of it. Later option involves understanding all the mess that the operating
+system vendors came up with.
+
 Configuration file
 ------------------
 
