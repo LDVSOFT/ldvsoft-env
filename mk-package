@@ -1,0 +1,136 @@
+#!/usr/bin/zsh
+setopt ERR_EXIT NO_UNSET TYPESET_SILENT
+
+sourcedir=${0:h}
+
+source $sourcedir/mk-lib.zsh
+
+debug=0
+packages=()
+
+while (( $# != 0 )) {
+	option=$1
+	if [[ $option =~ '^[^-]\.*' && -v option_wants_arg ]] {
+		break
+	}
+	shift
+	if [[ -v option_wants_arg ]] {
+		option=$option_wants_arg=$option
+		unset option_wants_arg
+	}
+	case $option {
+		-v|--verbose)
+			debug=$((debug + 1))
+			;;
+		-q|--quiet)
+			debug=$((debug - 1))
+			;;
+
+		--deb-source)
+			deb_prepare=1
+			deb_source=1
+			work=1
+			;;
+		--deb-binary)
+			deb_prepare=1
+			deb_binary=1
+			work=1
+			;;
+		--deb-prepare)
+			deb_prepare=1
+			work=1
+			;;
+
+		*)
+			error Unknown option $option.
+	}
+}
+
+if (( $# != 0 )) {
+	error Extra parameters: $@.
+}
+
+if [[ ! -v work ]] {
+	error Nothing to do\; request at least one: \
+		$'\n\t'Debian control files via --deb-prepare\; \
+		$'\n\t'Debian source package via --deb-source\; \
+		$'\n\t'Debian binary 'package(s)' via --deb-binary.
+}
+
+function prepare-debian {
+	local control=$sourcedir/debian/control
+	echo -n > $control
+	cat >>$control <<-EOF
+		Source: ldvsoft-env
+		Build-Depends: debhelper-compat (=13), zsh (>=5)
+		Homepage: https://github.com/LDVSOFT/ldvsoft-env/
+		Maintainer: Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>
+		Priority: optional
+		Section: misc
+		Standards-Version: 4.5.1.0
+		Rules-Requires-Root: no
+
+	EOF
+
+	local p
+	for p ( $all_packages ) {
+		local name
+		local description
+		local dependencies
+		local -A external_dependencies=()
+		local replacements=()
+
+		source-meta $p
+
+		local external_deps_spec=''
+		local k
+		for k ( ${(k)external_dependencies} ) {
+			local v=${external_dependencies[$k]}
+			external_deps_spec+=", $k (>=$v)"
+		}
+
+		cat >>$control <<-EOF
+			Package: ldvsoft-env-$p
+			Architecture: all
+			Depends: \${misc:Depends}, zsh (>=5)${external_deps_spec}
+			Description: LDVSoft environment: $name.
+			 LDVSoft environment packages allow simple configuration of tools for my
+			 personal taste. They don't change any configuration on their own, you must
+			 enable those via "ldvsoft-env enable" command.
+			 .
+			 $description
+
+		EOF
+	}
+
+	local changelog=$sourcedir/debian/changelog
+	echo -n >$changelog
+	# TODO
+	cat >>$changelog <<-EOF
+		ldvsoft-env (0) UNRELEASED; urgency=medium
+
+		  * Initial version.
+
+		 -- Lapshin Dmitry (LDVSOFT) <lapshin.dv@mail.ru>  Wed, 25 Aug 2021 19:16:39 +0300
+	EOF
+}
+
+# Debian
+if [[ -v deb_prepare ]] {
+	prepare-debian
+}
+if [[ -v deb_source || -v deb_binary ]] {
+	if [[ ! -x ${${:-dpkg-buildpackage}:c} ]] {
+		error Missing dpkg-buildpckage (have you installed dpkg-dev?).
+	}
+
+	builds=()
+	if [[ -v deb_source ]] {
+		builds+=(source)
+	}
+	if [[ -v deb_binary ]] {
+		builds+=(all)
+	}
+
+	dpkg-buildpackage --build=${(j:,:)builds}
+}

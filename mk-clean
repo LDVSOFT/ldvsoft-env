@@ -1,5 +1,50 @@
 #!/usr/bin/env zsh
-setopt ERR_EXIT NO_UNSET
+setopt ERR_EXIT NO_UNSET NULL_GLOB
+
+while (( $# != 0 )) {
+	option=$1
+	shift
+	case $option {
+		-v)
+			verbose=1
+			;;
+
+		--no-debian)
+			no_debian_control=1
+			no_debian_artifacts=1
+			;;
+		--no-debian-control)
+			no_debian_control=1
+			;;
+		--no-debian-artifacts)
+			no_debian_artifacts=1
+			;;
+
+		*)
+			echo Unknown option $option. >&2
+			exit 1
+	}
+}
+
+function execute {
+	if [[ -v verbose ]] {
+		echo $@
+	}
+	$@
+}
 
 cd ${0:h}
-rm -rf build/ test-dists/ test-install/
+execute rm -rf build/ test-dists/ test-install/
+
+if [[ ! -v no_debian_control ]] {
+	execute rm -rf debian/control debian/changelog
+}
+if [[ ! -v no_debian_artifacts ]] {
+	dsc=(../ldvsoft-env_*.dsc)
+	execute rm -f $dsc ${~dsc/.dsc/.tar.*}
+	execute rm -f ../ldvsoft-env-*_all.deb
+	execute rm -f \
+		../ldvsoft-env_*.build \
+		../ldvsoft-env_*.buildinfo \
+		../ldvsoft-env_*.changes
+}

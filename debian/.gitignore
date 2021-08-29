@@ -1,0 +1,7 @@
+*
+!.gitignore
+!rules
+
+!source
+source/*
+!source/format

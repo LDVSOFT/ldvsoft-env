@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+SHELL:=/bin/zsh
+
+PACKAGES:=$(shell ./mk-dist '--!list-packages')
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	./mk-clean --no-debian-control -v
+
+override_dh_auto_build:
+	mkdir build
+	for p ( $(PACKAGES) ) { \
+		mkdir build/$$p ; \
+		./mk-dist --location=system-usr --package $$p --build-dir build/$$p -v ; \
+	}
+
+override_dh_auto_install:
+	for p ( $(PACKAGES) ) { \
+		build/$$p/install --dest-dir=debian/ldvsoft-env-$$p --mkdir ; \
+	}
